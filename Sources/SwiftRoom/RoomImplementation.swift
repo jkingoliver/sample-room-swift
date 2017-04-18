@@ -18,10 +18,29 @@ import LoggerAPI
 import Foundation
 import KituraWebSocket
 import SwiftyJSON
+import ConversationV1
+
+let username = "username-goes-here"
+let password = "password-goes-here"
+let version = "2017-04-19"  // use today's date for the most recent version
+let workspaceID = "workspace-id-goes-here"
+let conversation = Conversation(username: username, password: password, version: version)
+
+let failure = { (error: Error) in print(error) }
 
 public class RoomImplementation {
-        
+    
+    var context: Context? // save context to continue conversation
     var roomDescription = RoomDescription()
+    
+    public init() {
+        
+        conversation.message(withWorkspace: workspaceID, failure: failure) { response in
+            print(response.output.text)
+            self.context = response.context
+        }
+        
+    }
     
     public func handleMessage(messageStr: String, endpoint: RoomEndpoint, connection: WebSocketConnection) throws {
         
@@ -75,8 +94,21 @@ public class RoomImplementation {
                 try processCommand(message: message, content: content, endpoint: endpoint, connection: connection)
             }
             else {
-                try endpoint.sendMessage(connection: connection,
-                                         message: Message.createChatMessage(username: username, message: content))
+                let request = MessageRequest(text: content, context: context)
+                conversation.message(withWorkspace: workspaceID, request: request, failure: failure) {
+                    response in
+                    print(response.output.text)
+                    
+                    if response.output.text.count > 0 {
+                        
+                        let text = response.output.text[0]
+                        try! endpoint.sendMessage(connection: connection,
+                                                  message: Message.createChatMessage(username: "Watson", message: text ))
+                        
+                    }
+                    
+                    self.context = response.context
+                }
             }
             break;
         default:
