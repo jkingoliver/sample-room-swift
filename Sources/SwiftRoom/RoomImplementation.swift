@@ -94,6 +94,10 @@ public class RoomImplementation {
                 try processCommand(message: message, content: content, endpoint: endpoint, connection: connection)
             }
             else {
+                
+                try endpoint.sendMessage(connection: connection,
+                                         message: Message.createChatMessage(username: username, message: content))
+                
                 let request = MessageRequest(text: content, context: context)
                 conversation.message(withWorkspace: workspaceID, request: request, failure: failure) {
                     response in
